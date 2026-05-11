@@ -203,9 +203,22 @@
 
             embassyPlaces.forEach(place => {
                 // Thêm ghim lên bản đồ
-                L.marker([place.lat, place.lng])
-                    .addTo(map)
-                    .bindPopup(`<b>${place.name}</b><br>${place.type === 'cafe' ? '☕' : '🌳'} Độ thân thiện: ${place.rating}`);
+                // Thêm ghim lên bản đồ
+L.marker([place.lat, place.lng])
+    .addTo(map)
+    .bindPopup(`
+        <div style="min-width: 150px;">
+            <b style="font-size: 14px;">${place.name}</b><br>
+            <span style="color: #666; font-size: 12px;">${place.type === 'cafe' ? '☕ Quán Cafe' : (place.type === 'park' ? '🌳 Công viên' : '🏥 Thú y')}</span><br>
+            <div style="margin-top: 10px;">
+                <a href="https://www.google.com/maps/dir/?api=1&destination=${place.lat},${place.lng}" 
+                   target="_blank" 
+                   style="background: #4285F4; color: white; padding: 5px 10px; border-radius: 5px; text-decoration: none; font-size: 12px; font-weight: bold; display: inline-block;">
+                   <i class="fas fa-directions"></i> Chỉ đường (Google Maps)
+                </a>
+            </div>
+        </div>
+    `);
 
                 // Thêm thẻ bài vào danh sách dưới bản đồ
                 const tags = place.amenities.map(item => 
