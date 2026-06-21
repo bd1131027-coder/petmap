@@ -10,22 +10,12 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <style>
-        #map {
-            height: 450px;
-            width: 100%;
-            border-radius: 20px;
-            border: 6px solid white;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-            z-index: 10;
-        }
+        #map { height: 450px; width: 100%; border-radius: 20px; border: 6px solid white; box-shadow: 0 10px 25px rgba(0,0,0,0.1); z-index: 10; }
         .leaflet-popup-content-wrapper { border-radius: 12px; font-family: sans-serif; }
-        /* Style cho checkbox để giống ảnh bạn gửi */
-        .amenity-checkbox {
-            accent-color: #eab308; /* Màu vàng */
-            width: 18px;
-            height: 18px;
-            cursor: pointer;
-        }
+        .amenity-checkbox { accent-color: #eab308; width: 18px; height: 18px; cursor: pointer; }
+        /* Hiệu ứng loading khi đang tìm địa chỉ */
+        .loading-shimmer { animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
     </style>
 </head>
 <body class="bg-pink-50 min-h-screen font-sans">
@@ -52,7 +42,7 @@
             <div class="max-w-5xl mx-auto mb-6 bg-white p-4 rounded-2xl shadow-md flex flex-wrap items-center gap-4">
                 <div class="flex-1 min-w-[200px] flex items-center gap-2 px-3 bg-gray-50 rounded-xl border border-gray-100">
                     <i class="fas fa-search text-gray-400"></i>
-                    <input type="text" id="search-input" oninput="render()" placeholder="Nhập tên địa điểm..." class="w-full bg-transparent py-2 text-sm outline-none text-gray-700">
+                    <input type="text" id="search-input" oninput="render()" placeholder="Tìm tên hoặc địa chỉ..." class="w-full bg-transparent py-2 text-sm outline-none text-gray-700">
                 </div>
                
                 <select id="filter-type" onchange="render()" class="bg-gray-50 border border-gray-100 px-3 py-2 rounded-xl text-sm font-bold text-gray-700 outline-none cursor-pointer">
@@ -63,18 +53,10 @@
                 </select>
 
                 <div class="flex flex-wrap gap-4 items-center text-sm font-bold text-gray-700">
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" value="Bát nước" onchange="render()" class="amenity-checkbox"> 💧 Bát nước
-                    </label>
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" value="Rào chắn" onchange="render()" class="amenity-checkbox"> 🧱 Rào chắn
-                    </label>
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" value="Đồ chơi" onchange="render()" class="amenity-checkbox"> 🧸 Đồ chơi
-                    </label>
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" value="Thức ăn" onchange="render()" class="amenity-checkbox"> 🦴 Thức ăn
-                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" value="Bát nước" onchange="render()" class="amenity-checkbox filter-check"> 💧 Bát nước</label>
+                    <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" value="Rào chắn" onchange="render()" class="amenity-checkbox filter-check"> 🧱 Rào chắn</label>
+                    <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" value="Đồ chơi" onchange="render()" class="amenity-checkbox filter-check"> 🧸 Đồ chơi</label>
+                    <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" value="Thức ăn" onchange="render()" class="amenity-checkbox filter-check"> 🦴 Thức ăn</label>
                 </div>
             </div>
 
@@ -83,54 +65,55 @@
     </section>
 
     <main class="container mx-auto py-8 px-4">
-        <h3 class="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-            📍 Địa điểm nổi bật tại Đài Loan
-        </h3>
-        <div id="place-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            </div>
+        <h3 class="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">📍 Địa điểm nổi bật</h3>
+        <div id="place-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
     </main>
 
     <div id="modal" class="fixed inset-0 bg-black/60 hidden flex items-center justify-center p-4 z-[100]">
         <div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
-            <h2 class="text-xl font-bold mb-4 flex items-center gap-2">🎁 Đánh dấu địa điểm mới</h2>
+            <h2 class="text-xl font-bold mb-2 flex items-center gap-2">🎁 Gợi ý địa điểm mới</h2>
+            <p class="text-xs text-gray-500 mb-4 italic">Hệ thống sẽ tự động xác định vị trí dựa trên địa chỉ bạn nhập.</p>
+           
             <form id="pet-form" class="space-y-4">
-                <input type="text" id="name-new" placeholder="Tên địa điểm (VD: Cafe Cún Con)" class="w-full border-2 border-gray-100 p-3 rounded-xl focus:border-yellow-400 outline-none" required>
-                <select id="type-new" class="w-full border-2 border-gray-100 p-3 rounded-xl">
+                <input type="text" id="modal-name" placeholder="Tên địa điểm (VD: Cafe Cún Con)" class="w-full border-2 border-gray-100 p-3 rounded-xl focus:border-yellow-400 outline-none" required>
+               
+                <input type="text" id="modal-address" placeholder="Nhập địa chỉ (VD: Taipei 101)" class="w-full border-2 border-gray-100 p-3 rounded-xl focus:border-yellow-400 outline-none" required>
+
+                <select id="modal-type" class="w-full border-2 border-gray-100 p-3 rounded-xl">
                     <option value="cafe">☕ Quán Cafe</option>
                     <option value="park">🌳 Công viên</option>
                     <option value="vet">🏥 Trạm thú y</option>
                 </select>
+
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-2">Tiện ích sẵn có:</label>
+                    <div class="grid grid-cols-2 gap-2 text-sm">
+                        <label class="flex items-center gap-2"><input type="checkbox" class="modal-amenity" value="Bát nước"> Bát nước</label>
+                        <label class="flex items-center gap-2"><input type="checkbox" class="modal-amenity" value="Rào chắn"> Rào chắn</label>
+                        <label class="flex items-center gap-2"><input type="checkbox" class="modal-amenity" value="Đồ chơi"> Đồ chơi</label>
+                        <label class="flex items-center gap-2"><input type="checkbox" class="modal-amenity" value="Thức ăn"> Thức ăn</label>
+                    </div>
+                </div>
+
                 <div class="flex justify-end gap-3 mt-6">
                     <button type="button" onclick="closeModal()" class="px-4 py-2 text-gray-400 font-bold">Hủy</button>
-                    <button type="submit" class="bg-yellow-400 text-yellow-900 px-6 py-2 rounded-xl font-bold">Chia sẻ ngay</button>
+                    <button type="submit" id="submit-btn" class="bg-yellow-400 text-yellow-900 px-6 py-2 rounded-xl font-bold">Chia sẻ ngay</button>
                 </div>
             </form>
         </div>
     </div>
 
     <script>
-        // 1. Khởi tạo bản đồ
-        var map = L.map('map').setView([25.0330, 121.5654], 11);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap'
-        }).addTo(map);
-
-        // MarkerGroup để xóa/vẽ lại ghim khi tìm kiếm
+        var map = L.map('map').setView([25.0330, 121.5654], 12);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap' }).addTo(map);
         var markerGroup = L.layerGroup().addTo(map);
 
-        // 2. Dữ liệu địa điểm
         let embassyPlaces = [
-            { name: "Yingfeng Riverside Dog Park", lat: 25.0715, lng: 121.5562, type: "park", amenities: ["Rào chắn", "Bát nước"], rating: "5/5" },
-            { name: "Kitten Coffee Garden", lat: 25.1023, lng: 121.5285, type: "cafe", amenities: ["Bát nước", "Thức ăn"], rating: "4.8/5" },
-            { name: "National Taiwan University Vet", lat: 25.0175, lng: 121.5405, type: "vet", amenities: ["Thức ăn", "Đồ chơi"], rating: "5/5" },
-            { name: "Huashan 1914 Creative Park", lat: 25.0440, lng: 121.5290, type: "park", amenities: ["Đồ chơi", "Rào chắn"], rating: "4.5/5" },
-            { name: "PS Bu Bu Cafe (Vườn Sao Băng)", lat: 25.1165, lng: 121.5335, type: "cafe", amenities: ["Thức ăn", "Bát nước"], rating: "4.7/5" },
-            { name: "Houtong Cat Village", lat: 25.0863, lng: 121.8267, type: "park", amenities: ["Thức ăn", "Đồ chơi"], rating: "5/5" },
-            { name: "Bitan Scenic Area", lat: 24.9540, lng: 121.5370, type: "park", amenities: ["Bát nước", "Rào chắn"], rating: "4.6/5" },
-            { name: "Calligraphy Greenway", lat: 24.1500, lng: 120.6630, type: "park", amenities: ["Đồ chơi", "Bát nước"], rating: "4.9/5" }
+            { name: "Yingfeng Riverside Dog Park", address: "Taipei, Taiwan", lat: 25.0715, lng: 121.5562, type: "park", amenities: ["Rào chắn", "Bát nước"], rating: "5/5" },
+            { name: "Kitten Coffee Garden", address: "Shilin, Taipei", lat: 25.1023, lng: 121.5285, type: "cafe", amenities: ["Bát nước", "Thức ăn"], rating: "4.8/5" },
+            { name: "National Taiwan University Vet", address: "Da’an, Taipei", lat: 25.0175, lng: 121.5405, type: "vet", amenities: ["Thức ăn", "Đồ chơi"], rating: "5/5" }
         ];
 
-        // 3. Hàm hiển thị (Có lọc tìm kiếm)
         function render() {
             const listContainer = document.getElementById('place-list');
             listContainer.innerHTML = '';
@@ -138,55 +121,83 @@
 
             const searchQuery = document.getElementById('search-input').value.toLowerCase().trim();
             const filterType = document.getElementById('filter-type').value;
-           
-            // Lấy các checkbox đang tích
-            const checkedAmenities = Array.from(document.querySelectorAll('.amenity-checkbox:checked')).map(cb => cb.value);
+            const checkedAmenities = Array.from(document.querySelectorAll('.filter-check:checked')).map(cb => cb.value);
 
             const filteredPlaces = embassyPlaces.filter(place => {
-                const matchesSearch = place.name.toLowerCase().includes(searchQuery);
+                const matchesSearch = place.name.toLowerCase().includes(searchQuery) || place.address.toLowerCase().includes(searchQuery);
                 const matchesType = (filterType === 'all') || (place.type === filterType);
-                // Lọc nếu địa điểm có chứa các tiện ích đang chọn
                 const matchesAmenities = checkedAmenities.every(a => place.amenities.includes(a));
-               
                 return matchesSearch && matchesType && matchesAmenities;
             });
 
             filteredPlaces.forEach(place => {
-                // Thêm ghim vào bản đồ
-                L.marker([place.lat, place.lng])
-                    .addTo(markerGroup)
-                    .bindPopup(`
-                        <b>${place.name}</b><br>
-                        Rating: ${place.rating}<br>
-                        <a href="https://www.google.com/maps/dir/?api=1&destination=${place.lat},${place.lng}" target="_blank" style="color:blue; text-decoration:underline;">Chỉ đường</a>
-                    `);
-
-                // Thêm thẻ bài vào danh sách
+                L.marker([place.lat, place.lng]).addTo(markerGroup)
+                 .bindPopup(`<b>${place.name}</b><br><small>${place.address}</small><br>Rating: ${place.rating}`);
+               
                 const tags = place.amenities.map(a => `<span class="bg-green-100 text-green-700 text-[10px] px-2 py-1 rounded-md mr-1 font-bold">#${a}</span>`).join('');
-                const card = `
+                listContainer.innerHTML += `
                     <div class="bg-white rounded-2xl p-5 shadow-sm border border-yellow-100">
                         <div class="flex justify-between items-start text-xs font-bold uppercase text-gray-400">
-                            <span>${place.type}</span>
-                            <span class="text-yellow-500">${place.rating}</span>
+                            <span>${place.type}</span> <span class="text-yellow-500">${place.rating}</span>
                         </div>
                         <h3 class="text-lg font-bold text-gray-800 mt-1">${place.name}</h3>
+                        <p class="text-xs text-gray-400 mb-2 truncate"><i class="fas fa-map-marker-alt"></i> ${place.address}</p>
                         <div class="mt-3 flex flex-wrap gap-y-2">${tags}</div>
                     </div>`;
-                listContainer.innerHTML += card;
             });
         }
 
-        // 4. Modal Functions
+        // LOGIC TÌM TỌA ĐỘ THẬT TỪ ĐỊA CHỈ
+        document.getElementById('pet-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const btn = document.getElementById('submit-btn');
+            const name = document.getElementById('modal-name').value;
+            const address = document.getElementById('modal-address').value;
+            const type = document.getElementById('modal-type').value;
+            const amenities = Array.from(document.querySelectorAll('.modal-amenity:checked')).map(cb => cb.value);
+
+            btn.innerText = "Đang tìm vị trí...";
+            btn.disabled = true;
+
+            try {
+                // Sử dụng API miễn phí của OpenStreetMap để chuyển địa chỉ thành tọa độ
+                const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`);
+                const data = await response.json();
+
+                if (data && data.length > 0) {
+                    const newPlace = {
+                        name: name,
+                        address: data[0].display_name, // Lấy địa chỉ chuẩn từ hệ thống
+                        type: type,
+                        lat: parseFloat(data[0].lat),
+                        lng: parseFloat(data[0].lon),
+                        amenities: amenities,
+                        rating: "Mới 🆕"
+                    };
+
+                    embassyPlaces.push(newPlace);
+                    render();
+                   
+                    // Di chuyển bản đồ đến chỗ vừa thêm
+                    map.setView([newPlace.lat, newPlace.lng], 15);
+                   
+                    e.target.reset();
+                    closeModal();
+                    alert("Thêm thành công địa điểm tại: " + data[0].display_name);
+                } else {
+                    alert("Không tìm thấy địa chỉ này. Vui lòng nhập chi tiết hơn (ví dụ thêm tên thành phố).");
+                }
+            } catch (error) {
+                alert("Lỗi kết nối hệ thống địa chỉ.");
+            } finally {
+                btn.innerText = "Chia sẻ ngay";
+                btn.disabled = false;
+            }
+        });
+
         function openModal() { document.getElementById('modal').classList.remove('hidden'); }
         function closeModal() { document.getElementById('modal').classList.add('hidden'); }
 
-        document.getElementById('pet-form').addEventListener('submit', function(e) {
-            e.preventDefault();
-            alert("Đã gửi đề xuất của bạn!");
-            closeModal();
-        });
-
-        // Chạy lần đầu
         render();
     </script>
 </body>
